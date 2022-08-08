@@ -1,0 +1,13 @@
+display_name,concept_id,level,group
+Particle swarm optimisation,c85617194,2,A
+Swarm intelligence,c119487961,3,A
+Evolutionary algorithm,c159149176,2,A
+Evolutionary computation,c105902424,2,A
+Genetic algorithm,c8880873,2,A
+Evolution strategy,c207002847,3,A
+Harmony search,c33099171,2,A
+Cuckoo search,c117241572,3,A
+Ant colony optimization algorithms,c40128228,2,A
+Differential evolution,c74750220,2,A
+Artificial bee colony algorithm,c97133563,2,A
+Bees algorithm,c143574069,3,A
