@@ -188,7 +188,7 @@ def read_concept_file(filename, mydb):
         concept_reader = reader(f, delimiter=',')
         next(concept_reader)  # Skip the header.
         for row in concept_reader:
-            (display_name, concept_id, level, group) = row
+            (display_name, concept_id) = row
             # find data and load it into dictionaries
             print('LOOKUP ' + row[1])
             lookup(row[1], mydb)
@@ -206,7 +206,7 @@ def main():
     mycursor.execute('SELECT openalex_id FROM works')
     all_ids.update(mycursor.fetchall())
     mycursor.close()
-    read_concept_file('test_3.csv', mydb)
+    read_concept_file('concepts.csv', mydb)
     mydb.close()
 
 
