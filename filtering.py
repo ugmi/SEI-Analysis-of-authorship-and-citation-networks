@@ -21,19 +21,32 @@ def fetch_names(mydb):
 def normalize(name):
     norm_name = ''
     try:
+        # Remove foreign characters from the name
+        # and make sure each name starts with a capital letter.
         cap_name = udecode(name.title())
     except AttributeError:
+        # No need to do anything if name was an empty string.
         return None
+    # Remove trailing whitespace.
+    cap_name = cap_name.strip()
+    # Examine the name letter by letter.
     for i in range(len(cap_name)-1):
         if cap_name[i] == '-':
             if cap_name[i+1] != ' ' and norm_name[len(norm_name)-1] != ' ':
+                # Add space instead of dash if the dash was between names.
                 norm_name = norm_name + ' '
         else:
+            if cap_name[i+1] == ' ' and cap_name[i] == ' ':
+                # Remove multiple spaces.
+                continue
             norm_name = norm_name + cap_name[i]
-            if cap_name[i].isupper() and cap_name[i+1] == ' ':
+            if cap_name[i+1] == ' ' and cap_name[i].isupper():
+                # Add a period after name abbreviation if there was none.
                 norm_name = norm_name + '.'
-            elif cap_name[i] == '.' and cap_name[i+1] != ' ':
+            elif cap_name[i+1] != ' ' and cap_name[i] == '.':
+                # Add a space after a period if there was none.
                 norm_name = norm_name + ' '
+    # Add the final letter to the name.
     norm_name = norm_name + cap_name[len(cap_name)-1]
     return norm_name
 
@@ -69,23 +82,14 @@ def normalize_authors(mydb):
 
 def remove_irr(mydb):
     mycursor = mydb.cursor()
-    print('delete type posted content or other or dissertation or grant'
-          ' or component or dataset or monograph')
+    print('Delete works which are not journal articles, proceedings articles,'
+          ' book chapters or books.')
     mycursor.execute(
-        'DELETE FROM works WHERE publication_type="posted-content"'
-        ' OR publication_type="other" OR publication_type="dissertation"'
-        ' OR publication_type="grant" OR publication_type="component"'
-        ' OR publication_type="dataset" OR publication_type="monograph"')
+        'DELETE FROM works WHERE NOT (publication_type="proceedings-article"'
+        ' OR publication_type="journal-article" OR publication_type="book"'
+        ' OR publication_type="book-chapter")')
     mydb.commit()
-    print('delete type peer-review or report or report-series or journal'
-          ' or reference-book or reference-entry')
-    mycursor.execute(
-        'DELETE FROM works WHERE publication_type="peer-review"'
-        ' OR publication_type="report" OR publication_type="report-series"'
-        ' OR publication_type="journal" OR publication_type="reference-book"'
-        ' OR publication_type="reference-entry"')
-    mydb.commit()
-    print('delete date later than 2022-09-01')
+    print('Delete works published later than 2022-09-01.')
     mycursor.execute('DELETE FROM works WHERE publication_date'
                      ' BETWEEN "2022-09-01" AND "2030-12-30"')
     mydb.commit()
@@ -100,9 +104,10 @@ def main():
         database='draft',
         auth_plugin='mysql_native_password',
     )
-    # remove_irr(mydb)
-    # print('Normalize author names.')
-    # normalize_authors(mydb)
+    print('Remove irrelevant data.')
+    remove_irr(mydb)
+    print('Normalize author names.')
+    normalize_authors(mydb)
     print('Set alt ids.')
     set_alt_ids(mydb)
     mydb.close()
@@ -110,18 +115,3 @@ def main():
 
 if __name__ == '__main__' or __name__ == 'builtins':
     main()
-
-"""
-print('delete concept cuckoo search and (zoology or brood parasite or art or history)')
-mycursor.execute('DELETE FROM works WHERE concepts LIKE "%Cuckoo search%" AND (concepts LIKE "%Zoology%" OR concepts LIKE "%Brood parasite%" OR concepts LIKE "%Art,%" OR concepts LIKE "%History%")')
-mydb.commit()
-print('delete concept harmony search and (aesthetics or color space or philosophy)')
-mycursor.execute('DELETE FROM works WHERE concepts LIKE "%Harmony search%" AND (concepts LIKE "%Aestethics%" OR concepts LIKE "%Color space%" OR concepts LIKE "%Philosophy%")')
-mydb.commit()
-print('delete date earlier than 1970')
-mycursor.execute('DELETE FROM works WHERE publication_date BETWEEN "1700-01-01" AND "1969-12-30"')
-mydb.commit()
-
-mycursor.execute('DELETE FROM works WHERE title LIKE "WITHDRAWN%" OR title LIKE "Withdrawal%"')
-mydb.commit()
-"""
