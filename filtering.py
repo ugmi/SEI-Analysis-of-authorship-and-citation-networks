@@ -11,6 +11,20 @@ from unidecode import unidecode as udecode
 
 
 def fetch_names(mydb):
+    """
+    Get all author names in the database with alt_id not yet set.
+
+    Parameters
+    ----------
+    mydb : MySQLConnection
+        Connection to the database.
+
+    Returns
+    -------
+    names : list
+        List of author names (strings).
+
+    """
     mycursor = mydb.cursor()
     mycursor.execute('SELECT name FROM authors WHERE alt_id=%s', (0,))
     names = mycursor.fetchall()
@@ -19,6 +33,26 @@ def fetch_names(mydb):
 
 
 def normalize(name):
+    """
+    Standartize name to a certain format.
+
+    The format: each name is capitalized, there are no double spaces
+    or spaces at the beginning or end of the string.
+    Each abbreviated name is followed by a period.
+    All foreign characters are replaced with latin equivalents.
+    Dashes are replaced by a single space.
+
+    Parameters
+    ----------
+    name : string
+        Name to normalize.
+
+    Returns
+    -------
+    norm_name : string
+        Normalized name.
+
+    """
     norm_name = ''
     try:
         # Remove foreign characters from the name
@@ -52,6 +86,19 @@ def normalize(name):
 
 
 def set_alt_ids(mydb):
+    """
+    Set the smallest author_id as alt id for each duplicate entry.
+
+    Parameters
+    ----------
+    mydb : MySQLConnection
+        Connection to the database.
+
+    Returns
+    -------
+    None.
+
+    """
     mycursor = mydb.cursor()
     # Ensure all entries are unique so that we don't end up going over
     # the same record multiple times.
@@ -67,6 +114,19 @@ def set_alt_ids(mydb):
 
 
 def normalize_authors(mydb):
+    """
+    Normalize names of all authors with alt_id not yet set.
+
+    Parameters
+    ----------
+    mydb : MySQLConnection
+        Connection to the database.
+
+    Returns
+    -------
+    None.
+
+    """
     mycursor = mydb.cursor()
     names = set(fetch_names(mydb))
     for name in names:
@@ -81,6 +141,19 @@ def normalize_authors(mydb):
 
 
 def remove_irr(mydb):
+    """
+    Remove irrelevant records from the database.
+
+    Parameters
+    ----------
+    mydb : MySQLConnection
+        Connection to the database.
+
+    Returns
+    -------
+    None.
+
+    """
     mycursor = mydb.cursor()
     print('Delete works which are not journal articles, proceedings articles,'
           ' book chapters or books.')
@@ -106,8 +179,8 @@ def main():
     )
     print('Remove irrelevant data.')
     remove_irr(mydb)
-    print('Normalize author names.')
-    normalize_authors(mydb)
+    # print('Normalize author names.')
+    # normalize_authors(mydb)
     print('Set alt ids.')
     set_alt_ids(mydb)
     mydb.close()
