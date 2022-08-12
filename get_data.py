@@ -5,8 +5,7 @@ Created on Sun Jun 19 15:01:12 2022
 
 @author: milasiunaite
 """
-import requests
-from csv import reader
+
 import mysql.connector
 from filtering import normalize
 
@@ -16,6 +15,19 @@ all_ids = set()
 
 
 def load_to_database(mydb):
+    """
+    Load the information from the dictionary publications to the database.
+
+    Parameters
+    ----------
+    mydb : MySQLConnection
+        Connection to the database.
+
+    Returns
+    -------
+    None.
+
+    """
     mycursor = mydb.cursor()
     # SQL query to insert a row into the table 'authors'.
     sql_a = 'INSERT INTO authors (openalex_id, name) VALUES (%s, %s)'
@@ -34,9 +46,12 @@ def load_to_database(mydb):
             # If the name of the venue is too long, crop it.
             if len(entry['host_venue']['display_name']) > 255:
                 entry['host_venue']['display_name'] = entry['host_venue']['display_name'][0:255]
-            # Tuple of values to insert into the row.
-            val_v = (entry['host_venue']['id'], entry['host_venue']['display_name'],
-                     entry['host_venue']['issn_l'], entry['host_venue']['publisher'])
+            # Tuple of values to insert in the row.
+            val_v = (entry['host_venue']['id'],
+                     entry['host_venue']['display_name'],
+                     entry['host_venue']['issn_l'],
+                     entry['host_venue']['publisher'])
+            # Insert row into the database.
             mycursor.execute(sql_v, val_v)
             mydb.commit()
             host_ids.add((entry['host_venue']['display_name'],))
@@ -53,7 +68,9 @@ def load_to_database(mydb):
         author_str = ''
         for auth in entry['authorships']:
             if (auth['author']['id'],) not in auth_ids:
+                # Tuple of values to insert in the row.
                 val_a = (auth['author']['id'], normalize(auth['author']['display_name']))
+                # Insert row into the database.
                 mycursor.execute(sql_a, val_a)
                 mydb.commit()
                 auth_ids.add((auth['author']['id'],))
@@ -62,36 +79,46 @@ def load_to_database(mydb):
                 'SELECT author_id FROM authors WHERE name = %s',
                 (normalize(auth['author']['display_name']),))
             try:
+                # Join author id to the author string.
                 author_str = author_str + ',' + str(mycursor.fetchall()[0][0])
             except IndexError:
+                # If there is no such author in the database, do nothing.
                 pass
+        # Remove leading comma.
         author_str = author_str.strip(',')
         try:
             if type(host_id) != list:
-                host_id = int(host_id)
+                host_id = [int(host_id)]
         except TypeError:
+            # If host_id is not a list and not convertible into an integer, ignore.
             host_id = None
         if host_id and len(host_id) > 0:
+            # Set one (the first) element as host_id.
             try:
                 host_id = host_id[0][0]
             except IndexError:
                 host_id = host_id[0]
-            sql_w = ('INSERT INTO works '
-                     '(openalex_id, doi, title, publication_type, cited_by_count, '
-                     'host_venue_id, author_ids, updated_date, publication_date, '
-                     'cited_ids, concepts) '
-                     'VALUES (' + '%s, ' * 10 + '%s)')
+            # SQL query to insert a row into the table 'works'.
+            sql_w = ('INSERT INTO works (openalex_id, doi, title, '
+                     'publication_type, cited_by_count, host_venue_id, '
+                     'author_ids, updated_date, publication_date, cited_ids, '
+                     'concepts) VALUES (' + '%s, ' * 10 + '%s)')
+            # Tuple of values to insert in the row.
             val_w = (entry['id'], entry['doi'], entry['title'], entry['type'],
-                     entry['cited_by_count'], host_id, author_str, entry['updated_date'],
-                     entry['publication_date'], cited_str, concept_str)
+                     entry['cited_by_count'], host_id, author_str,
+                     entry['updated_date'], entry['publication_date'],
+                     cited_str, concept_str)
         else:
+            # SQL query to insert a row into the table 'works'.
+            sql_w = ('INSERT INTO works (openalex_id, doi, title, '
+                     'publication_type, cited_by_count, author_ids, '
+                     'updated_date, publication_date, cited_ids, concepts) '
+                     'VALUES (' + '%s, ' * 9 + '%s)')
+            # Tuple of values to insert in the row.
             val_w = (entry['id'], entry['doi'], entry['title'], entry['type'],
                      entry['cited_by_count'], author_str, entry['updated_date'],
                      entry['publication_date'], cited_str, concept_str)
-            sql_w = ('INSERT INTO works '
-                     '(openalex_id, doi, title, publication_type, cited_by_count, '
-                     'author_ids, updated_date, publication_date, cited_ids, concepts) '
-                     'VALUES (' + '%s, ' * 9 + '%s)')
+        # Insert row into the database.
         mycursor.execute(sql_w, val_w)
         mydb.commit()
     mycursor.close()
@@ -99,7 +126,7 @@ def load_to_database(mydb):
 
 def load(work_info):
     """
-    Load the data into a dictionary.
+    Load the data into a dictionary. Update id list.
 
     Parameters
     ----------
@@ -111,7 +138,8 @@ def load(work_info):
     None.
 
     """
-    # 
+    # Do not load works which are retracted, have no openalex id or doi,
+    # are paratext or have no authors listed.
     if ((work_info['id'],) not in all_ids and work_info['doi']
             and not(work_info['is_retracted'] or work_info['is_paratext'])
             and len(work_info['authorships'])):
@@ -130,18 +158,25 @@ def load(work_info):
 
 def lookup(concept, mydb):
     """
-    Use the API to find all the works of a specified concept in openalex. Load them into dictionaries.
+    Use the API to find all the works of a specified concept in openalex.
+
+    This function connects to openalex API, gets the works,
+    and them loads them into a dictionary and the database.
 
     Parameters
     ----------
     concept : string
         The concept id in openalex.
 
+    mydb : MySQLConnection
+        Connection to the database.
+
     Returns
     -------
     None.
 
     """
+    import requests
     publications.clear()
     try:
         # Update the headers to get into the polite pool.
@@ -179,17 +214,23 @@ def read_concept_file(filename, mydb):
     filename : string
         Name of the file to read the concepts from, with extention '.csv'.
 
+    mydb : MySQLConnection
+        Connection to the database.
+
     Returns
     -------
     None.
 
     """
+    from csv import reader
+    # Open and read the csv file.
     with open(filename, mode='rt', encoding='utf8', newline='') as f:
         concept_reader = reader(f, delimiter=',')
-        next(concept_reader)  # Skip the header.
+        # Skip the header.
+        next(concept_reader)
         for row in concept_reader:
             (display_name, concept_id) = row
-            # find data and load it into dictionaries
+            # Find data and load it into dictionaries.
             print('LOOKUP ' + row[1])
             lookup(row[1], mydb)
 
