@@ -204,6 +204,8 @@ def graph_stats(G, name, plot=False):
     print('Average ' + name + ':', round(mean(data), 3))
     print('Standard deviation:', round(stdev(data), 3))
     print('Mode:', mode(data))
+    print('Percentage of nodes that are mode:',
+          round(data.count(mode(data))/len(data), 3))
     if plot:
         # Plot bar chart of number of occurences of each value of the property.
         plt.figure(figsize=(15, 15))
@@ -237,6 +239,9 @@ def stats_sizes(sizes, name='communities', plot=False):
     print('Standard deviation:', round(stdev(sizes), 3))
     print('Maximum size:', max(sizes))
     print('Minimum size:', min(sizes))
+    print('Most frequent size:', mode(sizes))
+    print('Percentage of ' + name + ' of this size:',
+          round(sizes.count(mode(sizes))/len(sizes), 3))
     if plot:
         plt.figure(figsize=(15, 15))
         plt.hist(sizes, bins=sizes[0])
@@ -299,7 +304,7 @@ def comm_heatmap(G, partition, labels=None, name='communities'):
                     break
             k = k - 1
     # Print stats about the objects.
-    stats_sizes(sizes, plot=True)
+    stats_sizes(list(sizes.values()), plot=True)
     # Print the heatmap.
     x_ticks = np.arange(0.5, n_lab, 1)
     plt.figure(figsize=(150, n_lab*10))
@@ -348,6 +353,14 @@ def heatmap(labels, entries, sizes=None):
     plt.xticks(ticks, labels, fontsize=10, rotation='vertical')
     plt.yticks(ticks, labels, fontsize=10)
     plt.pcolormesh(arr, cmap='Greys')
+    for i in range(n_lab):
+        for j in range(n_lab):
+            if arr[i, j] > 0.5:
+                color = 'white'
+            else:
+                color = 'black'
+            plt.annotate(
+                str(round(arr[i, j], 2)), xy=(j+0.25, i+0.5), color=color)
     plt.show()
 
 
