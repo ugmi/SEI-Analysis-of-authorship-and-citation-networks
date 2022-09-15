@@ -329,12 +329,12 @@ def heatmap(labels, entries, sizes=None, cat='reg'):
 
     Parameters
     ----------
-    labels : list
-        DESCRIPTION.
+    labels : dict
+        Keys are labels, values are label/group ids.
     entries : dict
-        Entries of each cell. Keys are row and column labels.
+        Entries of each cell. Keys are row and column ids.
     sizes : dict or None, optional
-        The sizes of groups. If 'None', sums of row entries. The default is 'None'.
+        The sizes of groups, keyed by ids. If 'None', sums of row entries. The default is 'None'.
     cat : string
         The type of heatmap. If 'rev', switch the order of tuples which key 'entries'.
         The default is 'reg'.
@@ -345,28 +345,31 @@ def heatmap(labels, entries, sizes=None, cat='reg'):
 
     """
     n_lab = len(labels)
-    arr = np.zeros((n_lab, n_lab), dtype=float)
+    arr = np.empty((n_lab, n_lab), dtype=float)
     if cat == 'reg':
         for i in range(n_lab):
             if sizes is None:
-                n = sum([entries[(labels[i], labels[j])] for j in range(n_lab)])
+                n = sum([entries[(i, j)] for j in range(n_lab)])
             else:
-                n = sizes[labels[i]]
+                n = sizes[i]
             for j in range(n_lab):
-                arr[i, j] += (entries[(labels[i], labels[j])] / n)
+                arr[i, j] = (entries[(i, j)] / n)
     elif cat == 'rev':
         for i in range(n_lab):
             if sizes is None:
-                n = sum([entries[(labels[j], labels[i])] for j in range(n_lab)])
+                n = sum([entries[(j, i)] for j in range(n_lab)])
             else:
-                n = sizes[labels[i]]
+                n = sizes[i]
             for j in range(n_lab):
-                arr[i, j] += (entries[(labels[j], labels[i])] / n)
+                try:
+                    arr[i, j] = (entries[(j, i)] / n)
+                except ZeroDivisionError:
+                    arr[i, j] = n
     # Print heatmap.
     ticks = np.arange(0.5, n_lab, 1)
     plt.figure(figsize=(n_lab, n_lab))
-    plt.xticks(ticks, labels, fontsize=10, rotation='vertical')
-    plt.yticks(ticks, labels, fontsize=10)
+    plt.xticks(ticks, list(labels.keys()), fontsize=10, rotation='vertical')
+    plt.yticks(ticks, list(labels.keys()), fontsize=10)
     plt.pcolormesh(arr, cmap='Greys')
     for i in range(n_lab):
         for j in range(n_lab):
