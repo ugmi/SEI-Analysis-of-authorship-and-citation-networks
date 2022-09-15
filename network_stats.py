@@ -269,12 +269,11 @@ def main():
     # Print info about the size of the network
     print('Citation Network')
     print('Number of nodes:', citG.order())
-    print('Number of edges:', citG.number_of_edges())
-    # The above is also the total number of indegrees/outdegrees.
+    print('Number of edges or sum of indegrees / outdegrees:', citG.number_of_edges())
     # Print simple stats about the network.
     if False:
         label_counts(citG)
-        sf.pub_per_year(citG, y=5)
+        sf.pub_per_year(citG)
         acc, deg_out, deg_in = sf.props_per_cpt(citG)
         sf.graph_stats(citG, name='outdegree', plot=True)
         print('Outdegrees in each concept')
