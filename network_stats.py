@@ -14,7 +14,7 @@ import stat_fig as sf
 
 def label_counts(G):
     """
-    Print how many nodes have one, two, three or multiple labels.
+    Print how many nodes have one, two, or more than two labels.
 
     Parameters
     ----------
@@ -26,40 +26,29 @@ def label_counts(G):
     None.
 
     """
-    counts = {'NONE': 0}
-    multiple_level1 = 0
+    # Number of works, per label
+    counts_total = {'NONE': 0}
     two_labels = 0
-    three_labels = 0
-    more_than_three = 0
+    more_than_two = 0
     for key in lb.keywords:
-        counts[key] = 0
-    counts_total = counts.copy()
-    counts_single = counts.copy()
+        counts_total[key] = 0
     for n in G:
         labels = G.nodes[n]['primary'].split(',')
         m = len(labels)
         if m > 1:
-            if m > 3:
-                more_than_three += 1
-            elif m == 3:
-                three_labels += 1
+            if m > 2:
+                more_than_two += 1
             elif m == 2:
                 two_labels += 1
             for lab in labels:
                 counts_total[lab] += 1
-            if sum([lab in labels for lab in lb.concepts_level1]) > 1:
-                multiple_level1 += 1
         else:
             counts_total[labels[0]] += 1
-            counts_single[labels[0]] += 1
-    multiple_total = two_labels + three_labels + more_than_three
+    del counts_total['NONE']
+    multiple_total = two_labels + more_than_two
     print('Works that have a single label:', len(G.nodes)-multiple_total)
     print('Works that have two labels:', two_labels)
-    print('Works that have three labels:', three_labels)
-    print('Works that have more than three labels:', more_than_three)
-    print('Works that have more than one label:', multiple_total)
-    # print('Works that have more than one level 1 label:', multiple_level1)
-    # print('Works that have only one label:', counts_single)
+    print('Works that have more than two labels:', more_than_two)
     # print(counts_total)
     return
 
@@ -313,10 +302,6 @@ def main():
         sf.print_table(ppp)
         print('Frequency of collaboration')
         sf.graph_stats(coG, name='edge weight', plot=True)
-        sf.correlation_plot(
-            x=[d for n, d in coG.degree()], xlabel='Node degree',
-            y=[weight for u, weight in coG.nodes.data("papers_published")],
-            ylabel='Number of papers published')
     # Partition the network.
     # Print simple stats and the heatmap relating to the partition.
     if False:
