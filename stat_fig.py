@@ -14,30 +14,24 @@ import networkx as nx
 from tabulate import tabulate
 
 
-def pub_per_year(G, y=5):
+def pub_per_year(G):
     """
-    Print table which shows how many works were published from 1950 to today.
-
-    Each row in the table corresponds to a distinct subfield.
-    The columns show how many works were published in the subfield in
-    'y' years starting from the year in the header.
+    Print diagram which shows how many works were published from 1985 to today.
 
     Parameters
     ----------
     G : nx.DiGraph
         Citation network.
-    y : int, optional
-        Number of years to consider as one time period. The default is 5.
 
     Returns
     -------
     None.
 
     """
-    counts = {'NONE': 0}
+    counts = {}
     for key in lb.keywords:
         counts[key] = 0
-    # Dictionary to store table data.
+    # Dictionary to store data.
     pub_counts = {}
     import mysql.connector
     mydb = mysql.connector.connect(
@@ -52,11 +46,10 @@ def pub_per_year(G, y=5):
     info = mycursor.fetchall()
     mycursor.close()
     mydb.close()
-    end = (2023 // y + 1) * (y)
-    for i in range(1950, end, y):
+    for i in range(1985, 2022):
         pub_counts[i] = counts.copy()
     for entry in info:
-        pb_year = (entry[1].year // y) * y
+        pb_year = entry[1].year
         try:
             labels = G.nodes[entry[0]]['primary'].split(',')
             for lab in labels:
@@ -64,9 +57,18 @@ def pub_per_year(G, y=5):
         except KeyError:
             # Ignore removed nodes.
             pass
-    tb = pd.DataFrame(data=pub_counts)
-    print(tabulate(tb, headers=[str(i) for i in range(1950, end, y)],
-                   tablefmt='fancy_grid'))
+    c = ['crimson', 'navy', 'pink', 'grey', 'brown', 'orange', 'purple', 'darkgreen', 'black']
+    i = 0
+    years = list(pub_counts.keys())
+    plt.figure(figsize=(25,15))
+    for key in counts:
+        y = [entr[key] for entr in pub_counts.values()]
+        plt.plot(years, y, lw=1, c=c[i], alpha=0.5, label=key, marker='o')
+        i += 1
+    plt.xlabel('Year')
+    plt.ylabel('Number of publications')
+    plt.legend()
+    return
 
 
 def correlation_plot(x, y, xlabel, ylabel):
@@ -315,13 +317,14 @@ def comm_heatmap(G, partition, labels=None, name='communities'):
     plt.show()
 
 
-def heatmap(labels, entries, sizes=None):
+def heatmap(labels, entries, sizes=None, cat='reg'):
     """
     Print a heatmap.
 
     Each cell contains the ratio between number of relations between
     the group in the row and the group in the column
-    and the total number of relations from the group in the row.
+    and the total number of relations associated with group in the row.
+    Possible relations: incoming and outgoing citations.
     The larger the ratio, the darker the color.
 
     Parameters
@@ -331,7 +334,10 @@ def heatmap(labels, entries, sizes=None):
     entries : dict
         Entries of each cell. Keys are row and column labels.
     sizes : dict or None, optional
-        The sizes of groups. If None, sums of row entries. The default is None.
+        The sizes of groups. If 'None', sums of row entries. The default is 'None'.
+    cat : string
+        The type of heatmap. If 'rev', switch the order of tuples which key 'entries'.
+        The default is 'reg'.
 
     Returns
     -------
@@ -340,13 +346,22 @@ def heatmap(labels, entries, sizes=None):
     """
     n_lab = len(labels)
     arr = np.zeros((n_lab, n_lab), dtype=float)
-    for i in range(n_lab):
-        if sizes is None:
-            n = sum([entries[(labels[i], labels[j])] for j in range(n_lab)])
-        else:
-            n = sizes[labels[i]]
-        for j in range(n_lab):
-            arr[i, j] += (entries[(labels[i], labels[j])] / n)
+    if cat == 'reg':
+        for i in range(n_lab):
+            if sizes is None:
+                n = sum([entries[(labels[i], labels[j])] for j in range(n_lab)])
+            else:
+                n = sizes[labels[i]]
+            for j in range(n_lab):
+                arr[i, j] += (entries[(labels[i], labels[j])] / n)
+    elif cat == 'rev':
+        for i in range(n_lab):
+            if sizes is None:
+                n = sum([entries[(labels[j], labels[i])] for j in range(n_lab)])
+            else:
+                n = sizes[labels[i]]
+            for j in range(n_lab):
+                arr[i, j] += (entries[(labels[j], labels[i])] / n)
     # Print heatmap.
     ticks = np.arange(0.5, n_lab, 1)
     plt.figure(figsize=(n_lab, n_lab))
@@ -362,6 +377,7 @@ def heatmap(labels, entries, sizes=None):
             plt.annotate(
                 str(round(arr[i, j], 2)), xy=(j+0.25, i+0.5), color=color)
     plt.show()
+    return
 
 
 def main():
